@@ -1,64 +1,71 @@
 #!/usr/bin/env node
-//load dependencies
-import fetch from 'node-fetch';
-import minimist from 'minimist';
-import moment from 'moment-timezone';
+import moment from "moment-timezone";
+import fetch from "node-fetch";
 
-const args = minimist(process.argv.slice(2));
-// display help if cmd called with -h
-if (args.h) {
-    show_help();
-}
-// Setup default values and update if arguments given
-let timezone = moment.tz.guess();
-if (args.z) {
-	timezone = args.z;
-}
-let days = 1;
-if (args.d) {
-	days = args.d;
-}
-let latitude;
-let longitude;
-if (args.n) {
-	latitude = args.n;
-}else if (args.s) {
-	latitude = -args.s;
-}
-if (args.e) {
-	longitude = args.e;
-}else if (args.w) {
-	longitude = -args.w;
+
+const timezone = moment.tz.guess();
+
+const argv = process.argv.slice(2);
+
+var lat = null
+var long = null
+
+if(argv[0] == '-h'){
+    console.log("Usage: galosh.js [options] -[n|s] LATITUDE -[e|w] LONGITUDE -z TIME_ZONE")
+    console.log( "-h            Show this help message and exit.")
+    console.log("-n, -s        Latitude: N positive; S negative.")
+    console.log("-e, -w        Longitude: E positive; W negative.")
+    console.log("-z            Time zone: uses tz.guess() from moment-timezone by default.")
+    console.log("-d 0-6        Day to retrieve weather: 0 is today; defaults to 1.")
+    console.log("-j            Echo pretty JSON from open-meteo API and exit.")
+    process.exit(0)
 }
 
-// Make a request
-const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + latitude + '&longitude=' + longitude + '&daily=precipitation_hours&temperature_unit=fahrenheit&windspeed_unit=mph&precipitation_unit=inch&timezone=' + timezone);
+if(argv[0] == '-j'){
+    // Make a request
+    //const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude='+ lat +'&longitude='+ long +'&daily=precipitation_hours&timezone='+timezone);
+
+    // Get the data from a request made
+    //const data = await response.json();
+
+    console.log("Latitude must be in range")
+    process.exit(0)
+}
+
+if(argv[0] == '-n') {
+    lat = parseInt(argv[1]).toFixed(2);
+}
+else {
+    lat = -parseInt(argv[1]).toFixed(2);
+}
+
+
+if (argv[2] == '-e'){
+    long = parseInt(argv[3]).toFixed(2);
+}
+else{
+    long = -parseInt(argv[3]).toFixed(2);
+}
+
+
+
+// Make request
+const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude='+ lat +'&longitude='+ long +'&daily=precipitation_hours&timezone='+timezone);
+
+// Get the data from request
 const data = await response.json();
-// Handle -j argument
-if (args.j) {
-	console.log(data);
-	process.exit(0);
-}
-// Check if you will need your galoshes
-if (data.daily.precipitation_hours[days] > 0) {
-	console.log("You might need your galoshes ");
-	if (days == 0) {
-		console.log("today.");
-	}else if (days > 1) {
-		console.log("in " + days + " days.");
-	}else {
-		console.log("tomorrow.");
-	}
+var days = 1
+
+
+if(argv[6] == '-d'){
+    days = argv[7]
 }
 
-// show help function
-function show_help() {
-	console.log("Usage: galosh.js [options] -[n|s] LATITUDE -[e|w] LONGITUDE -z TIME_ZONE\n")
-    console.log("    -h            Show this help message and exit.\n")
-    console.log("    -n, -s        Latitude: N positive; S negative.\n")
-    console.log("    -e, -w        Longitude: E positive; W negative.\n")
-    console.log("    -z            Time zone: uses tz.guess() from moment-timezone by default.\n")
-    console.log("    -d 0-6        Day to retrieve weather: 0 is today; defaults to 1.\n")
-    console.log("    -j            Echo pretty JSON from open-meteo API and exit.\n")
-	process.exit(0)
+
+if (days == 0) {
+    console.log(data.daily.precipitation_hours[days]+" precipitation hours today.")
+} else if (days > 1) {
+    console.log(data.daily.precipitation_hours[days]+" precipitation hours in" + days + "days.")
+} else {
+    console.log(data.daily.precipitation_hours[1]+" precipitation hours tomorrow.")
 }
